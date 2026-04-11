@@ -1,0 +1,14 @@
+startCommand:
+  type: http
+  url: https://api.telldone.app/mcp/user/mcp
+  configSchema:
+    type: object
+    required:
+      - mcpToken
+    properties:
+      mcpToken:
+        type: string
+        title: MCP Token
+        description: "Your TellDone MCP token. Get it at app.telldone.app > Settings > AI Agents (MCP)"
+        x-from:
+          header: x-mcp-token
