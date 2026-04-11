@@ -1,9 +1,13 @@
 {
   "name": "telldone-mcp",
   "version": "1.0.0",
+  "mcpName": "io.github.exp78/telldone",
   "description": "TellDone MCP Server - voice-first planning for AI tools",
   "homepage": "https://telldone.app",
-  "repository": "https://github.com/exp78/telldone-mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/exp78/telldone-mcp.git"
+  },
   "keywords": ["mcp", "model-context-protocol", "productivity", "tasks", "notes", "voice", "planning"],
   "license": "MIT",
   "mcp": {
