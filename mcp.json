@@ -1,0 +1,16 @@
+{
+  "name": "telldone",
+  "displayName": "TellDone",
+  "description": "Voice-first planning — access your notes, tasks, events and reports from AI tools",
+  "url": "https://api.telldone.app/mcp/user/mcp",
+  "transport": "streamable-http",
+  "authentication": {
+    "type": "bearer",
+    "instructions": "Get your token at app.telldone.app -> Settings -> AI Agents (MCP)"
+  },
+  "tools": 21,
+  "categories": ["productivity", "planning", "tasks", "notes", "calendar"],
+  "website": "https://telldone.app",
+  "repository": "https://github.com/exp78/telldone-mcp",
+  "documentation": "https://docs.telldone.app/integrations/mcp-access"
+}
