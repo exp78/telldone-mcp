@@ -76,6 +76,97 @@ Ask your AI tool things like:
 - *"What events do I have next week?"*
 - *"Show me my daily report from yesterday"*
 
+## Data Formats — Read This Before Parsing Output
+
+Every tool returns JSON. The MCP wire response wraps payloads in `result.content[0].text` as a **JSON-encoded string** — parse it with `json.loads()` (or equivalent) to get the actual data.
+
+**All datetimes, dates, and UUIDs in the decoded JSON are STRINGS, not native language types.** Do not call `.toordinal()`, `.weekday()`, or any datetime method directly on them — you will get `TypeError: 'str' has no attribute 'toordinal'`. Parse them first.
+
+### Scalar output types
+
+| Field shape | Wire format | Example | Parse with |
+|-------------|-------------|---------|------------|
+| UUID | string (lowercase hex with dashes) | `"b3f3c8a0-9a4d-4e12-9f4a-1a1b2c3d4e5f"` | use as-is |
+| Datetime (timestamp) | ISO 8601 string with timezone offset | `"2026-04-18T11:30:00+00:00"` | `datetime.fromisoformat(s)` in Python; `new Date(s)` in JS |
+| Date (calendar day, no time) | `YYYY-MM-DD` string | `"2026-04-18"` | `date.fromisoformat(s)` in Python |
+| Boolean | `true` / `false` | `true` | native |
+| Integer | JSON number | `42` | native |
+| Nullable field | JSON `null` | `null` | `None` / `null` |
+
+### Array / object output types
+
+| Field | Wire format |
+|-------|-------------|
+| `tags` (on notes/tasks/events) | array of strings, OR `null` if never set, OR `[]` if cleared |
+| `reminder_minutes` (events, writable field) | array of ints on input/output |
+| `attendees` (events, writable field) | array of strings (names/emails) |
+| `metadata` (notes) | JSON object or `null` |
+| `tasks` / `events` arrays inside `get_note` / `get_notes_full` | always present, possibly empty `[]` |
+
+### Enum values
+
+- `priority` — `"low"`, `"medium"`, `"high"`, or `null`
+- `note.type` — `"task"`, `"idea"`, `"info"`, `"status"`, `"meeting"`, `"event"`, `"reflection"`
+- `note.status` — `"active"`, `"archived"` (deleted records are excluded from every read tool)
+- `task.status` — `"todo"`, `"done"` (query param `status="all"` means "all not-deleted")
+- `event.status` — `"confirmed"`, `"tentative"`, `"cancelled"`
+- `report.type` — `"daily"`, `"weekly"`, `"monthly"`, `"yearly"`
+- `source` (tasks), `completed_by` (tasks) — free-form strings: `"mcp"`, `"app"`, `"sync"`, `"audio"`, `"todoist"`, `"notion"`, etc.
+
+### Per-tool output fields
+
+| Tool | Returned fields (all at top level of each array item unless noted) |
+|------|------|
+| `get_profile` | `id` UUID, `email` str, `display_name` str\|null, `locale` str, `transcription_locale` str\|null, `timezone` str (IANA), `subscription` str, `mcp_mode` str, `created_at` ISO 8601 datetime str, `stats` {notes:int, tasks:int, events:int} |
+| `get_notes` | `id` UUID, `title` str, `summary` str\|null, `type` enum, `tags` str[]\|null, `priority` enum\|null, `status` enum, `recorded_at` ISO 8601 datetime str\|null, `created_at` ISO 8601 datetime str |
+| `get_note` | note fields (`id`, `title`, `summary`, `transcript` str\|null, `type`, `tags`, `priority`, `status`, `metadata` obj\|null, `created_at`) + `tasks[]` + `events[]` arrays with subset fields |
+| `get_notes_full` | array of notes with `tasks[]` and `events[]` embedded (same subset as `get_note`, minus `metadata`) |
+| `get_tasks` | `id` UUID, `title` str, `description` str\|null, `status` enum, `priority` enum\|null, `tags` str[]\|null, `deadline` YYYY-MM-DD str\|null, `reminder_at` ISO 8601 datetime str\|null, `completed_at` ISO 8601 datetime str\|null, `completed_by` str\|null, `source` str\|null, `created_at` ISO 8601 datetime str |
+| `get_events` | `id` UUID, `title` str, `description` str\|null, `status` enum, `start_at` ISO 8601 datetime str (non-null), `end_at` ISO 8601 datetime str (non-null), `location` str\|null, `is_all_day` bool\|null, `tags` str[]\|null, `created_at` ISO 8601 datetime str. **Note:** `attendees`, `reminder_minutes`, `recurrence_rule` are writable via `create_event`/`update_event` but are NOT returned by `get_events`. |
+| `get_reports` | `id` UUID, `type` enum, `period_start` YYYY-MM-DD str, `period_end` YYYY-MM-DD str, `content_md` str\|null, `created_at` ISO 8601 datetime str |
+| `get_tags` | `tag` str, `usage_count` int, `is_pinned` bool, `is_manual` bool |
+| `search` | `{notes: [...], tasks: [...], events: [...]}` — each item is `{id UUID, type "note"/"task"/"event", title str, detail str\|null, created_at ISO 8601 datetime str}`. All three arrays always present, possibly empty. |
+| Write tools | minimal: `{id UUID, title str, status enum}` (plus `type` on notes). Do **not** expect full records — call the matching `get_*` tool if you need more fields. |
+| Delete tools | `{id UUID, deleted: true}` |
+| `process_note` | `{audio_id UUID, status "processing", mode "audio+stt"/"text-only", message str}` — async; final result arrives via WebSocket `note_ready` or a later `get_notes` call. |
+| Any tool on error | `{error: "message"}` — always null-check for the `error` key before treating the response as a record. |
+
+### Input parameter formats
+
+- `note_id`, `task_id`, `event_id`, `parent_*_id` — UUID strings
+- `date_from`, `date_to`, `deadline` — `YYYY-MM-DD` strings (empty string means "no filter")
+- `start_at`, `end_at`, `reminder_at` — ISO 8601 datetime strings, e.g. `"2026-04-15T09:00:00Z"` or `"2026-04-15T09:00:00+00:00"`
+- `tags` — comma-separated string on input (e.g. `"work,urgent"`); stored/returned as `string[]`
+- `reminder_minutes`, `attendees` — comma-separated strings on input; stored/returned as arrays
+- `is_all_day` — boolean on `create_event`; string `"true"`/`"false"` on `update_event`
+- `recurrence_rule` — RRULE string, e.g. `"FREQ=WEEKLY;BYDAY=MO,WE,FR"`
+
+### Parsing example (Python)
+
+```python
+import json
+from datetime import datetime, date
+
+# tools/call response → text → decode
+payload = json.loads(response["result"]["content"][0]["text"])
+
+# Check for error first
+if "error" in payload:
+    raise RuntimeError(payload["error"])
+
+# Events: start_at is a STRING like "2026-04-18T11:30:00+00:00"
+for e in payload:   # payload is list from get_events
+    start = datetime.fromisoformat(e["start_at"])   # -> tz-aware datetime
+    if e["end_at"]:
+        end = datetime.fromisoformat(e["end_at"])
+
+# Tasks: deadline is a STRING like "2026-04-18" (date only)
+for t in tasks_payload:
+    if t["deadline"]:
+        d = date.fromisoformat(t["deadline"])
+        days_left = (d - date.today()).days
+```
+
 ## Tools (21)
 
 ### Read Tools (10)
@@ -196,6 +287,7 @@ call "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name
   | python3 -c "
 import sys, json
 r = json.loads(json.load(sys.stdin)['result']['content'][0]['text'])
+# NOTE: start_at is a STRING like '2026-04-18T11:30:00+00:00' — parse before date math
 for e in r: print(f'  {e[\"start_at\"][:16]} {e[\"title\"]}')" 2>/dev/null
 ```
 
@@ -204,7 +296,7 @@ for e in r: print(f'  {e[\"start_at\"][:16]} {e[\"title\"]}')" 2>/dev/null
 ```bash
 #!/bin/bash
 # Create a task via MCP
-TOKEN="${1:?Usage: ./create-task.sh YOUR_TOKEN}"
+TOKEN="${1:?Usage: ./create-task.sh YOUR_TOKEN 'Task title'}"
 TITLE="${2:?Usage: ./create-task.sh YOUR_TOKEN 'Task title'}"
 PRIORITY="${3:-medium}"
 
