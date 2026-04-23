@@ -1,6 +1,6 @@
 {
   "name": "telldone-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "mcpName": "io.github.exp78/telldone",
   "description": "TellDone MCP Server - voice-first planning for AI tools",
   "homepage": "https://telldone.app",
@@ -20,7 +20,7 @@
       "type": "bearer",
       "instructions": "Get your token at app.telldone.app -> Settings -> AI Agents (MCP)"
     },
-    "tools": 21,
+    "tools": 20,
     "categories": ["productivity", "planning", "tasks", "notes", "calendar"]
   }
 }

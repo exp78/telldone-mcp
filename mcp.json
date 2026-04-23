@@ -8,7 +8,7 @@
     "type": "bearer",
     "instructions": "Get your token at app.telldone.app -> Settings -> AI Agents (MCP)"
   },
-  "tools": 21,
+  "tools": 20,
   "categories": ["productivity", "planning", "tasks", "notes", "calendar"],
   "website": "https://telldone.app",
   "repository": "https://github.com/exp78/telldone-mcp",

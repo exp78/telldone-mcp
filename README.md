@@ -216,9 +216,11 @@ create_note({
 
 ---
 
-## Tools (21)
+## Tools (20)
 
-### Read Tools (10)
+All tools include [MCP annotations](https://modelcontextprotocol.io/specification/2025-06-18/server/tools#tool-annotations) — `title`, `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` — so MCP clients can surface the right confirmation UI. Every tool runs against the Telldone database only (`openWorldHint: false`) — the server never reaches out to external APIs.
+
+### Read Tools (9)
 
 | Tool | Description |
 |------|-------------|
@@ -363,8 +365,8 @@ curl -s -X POST "https://api.telldone.app/mcp/user/mcp" \
 |------|-----------|------|-------|-------|
 | Free | -- | -- | -- | $0 |
 | Basic | -- | -- | -- | $4.99/mo |
-| **Pro** | **Read & Write** | **10 tools** | **11 tools** | **$11.99/mo** |
-| **Ultra** | **Read & Write** | **10 tools** | **11 tools** | **$24.99/mo** |
+| **Pro** | **Read & Write** | **9 tools** | **11 tools** | **$11.99/mo** |
+| **Ultra** | **Read & Write** | **9 tools** | **11 tools** | **$24.99/mo** |
 
 Pro and Ultra have the same MCP tools. Ultra has higher quotas (unlimited notes, 1500 STT min/mo, 300 uploads/day).
 

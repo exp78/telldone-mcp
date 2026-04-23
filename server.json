@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.exp78/telldone",
-  "description": "Voice-first planning — notes, tasks, events and AI reports. 21 tools. iOS + Apple Watch.",
+  "description": "Voice-first planning — notes, tasks, events and AI reports. 20 tools. iOS + Apple Watch.",
   "repository": {
     "url": "https://github.com/exp78/telldone-mcp",
     "source": "github"
   },
-  "version": "1.1.0",
+  "version": "1.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "telldone-mcp",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "transport": {
         "type": "streamable-http",
         "url": "https://api.telldone.app/mcp/user/mcp"

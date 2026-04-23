@@ -2,6 +2,31 @@
 
 All notable changes to the TellDone MCP Server integration surface.
 
+## 1.2.0 — 2026-04-23
+
+### Added
+
+- **MCP tool annotations on all 20 tools.** Every `@mcp.tool()` now exposes `title`, `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` per the MCP 2025-06-18 spec. This lets clients (Claude Desktop, Cursor, Windsurf, etc.) surface the correct confirmation UI:
+  - Read tools (`get_*`, `search`): `readOnlyHint: true`.
+  - Update tools (`update_note`, `update_task`, `update_event`, `complete_task`): `idempotentHint: true`.
+  - Delete tools (`delete_note`, `delete_task`, `delete_event`): `destructiveHint: true` + `idempotentHint: true`.
+  - All tools: `openWorldHint: false` — Telldone server only touches its own database, never reaches external APIs.
+- Required for Anthropic Connectors Directory submission.
+
+### Fixed
+
+- **Tool count corrected from 21 → 20.** Earlier documentation counted `get_usage` as a separate tool, but usage stats are actually returned inline by `get_profile`. `README.md`, `package.json`, `server.json`, `mcp.json` updated.
+
+### Changed
+
+- `README.md` — "Tools (21)" section header updated to "Tools (20)" with an intro note about annotations and what `openWorldHint: false` means for users.
+
+### Backward compatibility
+
+Fully backward-compatible. Annotations are additive metadata — existing clients that ignore them continue to work unchanged. Tool signatures and return shapes unchanged.
+
+---
+
 ## 1.1.0 — 2026-04-23
 
 ### Added
