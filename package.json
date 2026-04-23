@@ -1,6 +1,6 @@
 {
   "name": "telldone-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "mcpName": "io.github.exp78/telldone",
   "description": "TellDone MCP Server - voice-first planning for AI tools",
   "homepage": "https://telldone.app",

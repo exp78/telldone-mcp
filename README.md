@@ -167,6 +167,55 @@ for t in tasks_payload:
         days_left = (d - date.today()).days
 ```
 
+## Note Fields: title, summary, transcript
+
+Every note has three text fields with **different roles and different limits**. Choosing the right field matters — LLM clients (Claude Desktop, Cursor, etc.) should split content appropriately when using `create_note` or `update_note`.
+
+| Field | Role | Limit | Included in report LLM prompts? |
+|-------|------|-------|----------------------------------|
+| `title` | One-line subject shown in lists, previews, push, email subjects. | 200 chars | ✅ (as list header) |
+| `summary` | 1–3 sentence **teaser**. | **Hard cap 1000 chars** — product decision. | ✅ **Verbatim.** Keep it concise. |
+| `transcript` | Full note **body**. Shown in detail view. | **Plan-based** (see below) | ❌ Never. Safe to be long. |
+
+**Plan-based transcript limits** (`subscription_plans.max_text_length`):
+
+| Plan | Max transcript chars |
+|------|----------------------|
+| Free | 2 000 |
+| Basic | 8 000 |
+| **Pro** | **20 000** |
+| **Ultra** | **50 000** |
+| Custom | 100 000 |
+
+**Rule of thumb for LLM clients:**
+
+- **Short output (notes, reminders, todos):** just `title` + `summary`. Leave `transcript` empty.
+- **Long output (meeting notes, drafts, brainstorms, research dumps):** put a 1–3 sentence `summary` and the **full body in `transcript`**. Do not pack everything into summary — you'll hit the 1000-char error.
+
+**Overflow error messages:**
+
+- `summary too long (max 1000 chars, got N). For long-form content use the 'transcript' parameter (plan-based limit).`
+- `transcript too long (max 20000 chars for pro plan, got N)`
+
+**Correct usage example** (Claude Desktop captures a meeting):
+```jsonc
+create_note({
+  title: "Weekly engineering sync — API versioning",
+  summary: "Team agreed on semver deprecation policy with 6-month sunset window. Owner: Alex. Next sync: Thu.",
+  transcript: "Full meeting transcript: Alice raised the question of how to deprecate v1...\n\n[... 5 KB of detail ...]",
+  tags: "engineering,versioning,meeting"
+})
+```
+
+**Why two different caps?**
+
+- `summary` is included **verbatim** in daily/weekly/monthly report LLM prompts. If every summary could be 20 KB, report prompts would blow up in cost and latency (and risk context-window overflow for heavy users). 1000 chars was set in April 2026 after measuring prod data (median 247, max 554).
+- `transcript` is **never** in report prompts — it only shows up in the UI detail view. Large transcripts cost only storage, not LLM tokens. Capping by plan prevents abuse but otherwise lets you be generous.
+
+**Backward compatibility:** `transcript` is an optional parameter (default `""`). Old clients calling `create_note(title, summary, tags, type)` continue to work unchanged — the database stores `transcript = NULL`. No migration needed.
+
+---
+
 ## Tools (21)
 
 ### Read Tools (10)
@@ -188,10 +237,10 @@ for t in tasks_payload:
 | Tool | Description |
 |------|-------------|
 | `process_note` | Runs the full AI analysis pipeline on text or audio input — identical to recording a voice note in the mobile app. Accepts `text` (string) or `audio_base64` + `audio_format` (m4a/wav/mp3). AI extracts structured note + tasks + events + tags. Returns immediately with `audio_id`; results arrive asynchronously. Poll with `get_notes()` to retrieve processed output. |
-| `create_note` | Creates a plain text note without AI analysis. Parameters: `title` (required), `summary`, `type` (task/idea/info/status/meeting/event/reflection), `tags` (comma-separated). Use when you want to store structured text directly without LLM processing. |
+| `create_note` | Creates a plain text note without AI analysis. Parameters: `title` (required, max 200), `summary` (max 1000 chars, concise teaser — included in report LLM prompts), `transcript` (plan-based limit, long-form body — NOT in report prompts), `type` (task/idea/info/status/meeting/event/reflection), `tags` (comma-separated, max 20). See **Note Fields** section for where to put long text. |
 | `create_task` | Creates a task with `title` (required), `description`, `priority` (low/medium/high, default: medium), `deadline` (ISO 8601 date), `reminder_at` (ISO 8601 datetime), `tags` (comma-separated). Task is created with status "todo". Syncs to mobile app in real-time. |
 | `create_event` | Creates a calendar event with `title` (required), `start_at`/`end_at` (ISO 8601 datetime), `location`, `attendees` (comma-separated), `reminder_minutes` (integer), `recurrence` (rrule string), `status` (confirmed/tentative). |
-| `update_note` | Updates note fields by `note_id` (UUID, required). Optional: `title`, `summary`, `type`, `tags`, `priority`, `status`. Only provided fields are changed; omitted fields remain unchanged. |
+| `update_note` | Updates note fields by `note_id` (UUID, required). Optional: `title`, `summary` (max 1000), `transcript` (plan-based limit, long-form body), `type`, `tags`, `priority`, `status`. Only provided fields are changed; omitted fields remain unchanged. Pass `" "` (single space) for `summary` or `transcript` to clear the field. |
 | `update_task` | Updates task fields by `task_id` (UUID, required). Optional: `title`, `description`, `priority`, `deadline`, `reminder_at`, `tags`, `status` (todo/done). Use `complete_task` as a shortcut for marking done. |
 | `update_event` | Updates event fields by `event_id` (UUID, required). Optional: `title`, `start_at`, `end_at`, `location`, `attendees`, `status` (confirmed/tentative/cancelled), `reminder_minutes`. |
 | `complete_task` | Marks a task as done by `task_id` (UUID). Shortcut for `update_task` with `status: "done"`. Records completion timestamp and source ("mcp"). |

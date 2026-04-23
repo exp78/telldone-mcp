@@ -6,12 +6,12 @@
     "url": "https://github.com/exp78/telldone-mcp",
     "source": "github"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "telldone-mcp",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "transport": {
         "type": "streamable-http",
         "url": "https://api.telldone.app/mcp/user/mcp"
